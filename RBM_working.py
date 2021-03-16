@@ -104,7 +104,7 @@ class RBM(object):
         """
         return sigmoid(hidden_v @ np.transpose(self.W) + self.a_bias)
 
-    def contrastive_divergence(self, data, epoch=10, batch_size=32, learning_rate=0.01):
+    def train(self, data, epoch=10, batch_size=32, learning_rate=0.01):
         """Entraîne le RBM avec l'algorithme de contrastive divergence.
         ------
         data : (np.array) données d'entraînement, de dimension (n_samples, self.visible_dim)
