@@ -2,9 +2,12 @@ import scipy.io
 import os
 import string
 import numpy as np
-import tensorflow as tf
 import scipy.misc
 import imageio
+import scipy.misc
+import numpy as np
+import matplotlib.pyplot as plt
+
 
 def lire_alpha_digits(caractere):
     """Permet de récupérer les données sous forme matricielle
@@ -17,42 +20,37 @@ def lire_alpha_digits(caractere):
     propre au caractère demandé
     """
     cwd = os.getcwd()
-    mat = scipy.io.loadmat(cwd + '/data/binaryalphadigs.mat')
+    mat = scipy.io.loadmat(cwd + "/data/binaryalphadigs.mat")
 
     if type(caractere) == int and caractere < 36 and caractere >= 0:
-        data = mat.get('dat')[caractere]
-        data = np.array([i for i in data])
-        data = data.reshape(39,-1)
-        return data
+        data = mat.get("dat")[caractere]
     elif type(caractere) == str and len(caractere) == 1:
-        data = mat.get('dat')[10 + string.ascii_uppercase.index(caractere)]
-        data = np.array([i for i in data])
-        data = data.reshape(39,-1)
-        return data
-    else : raise ValueError("Data not available for that caracter")
+        data = mat.get("dat")[10 + string.ascii_uppercase.index(caractere)]
+    else:
+        raise ValueError("Data not available for that caracter")
+    data = np.array([i for i in data])
+    im_shape = data.shape[1:]
+    data = data.reshape(data.shape[0], -1)
+    return data, im_shape
+
 
 def sample_bernoulli(proba):
-    """ Prend un échantillon d'une distribution de Bernoulli
+    """Prend un échantillon d'une distribution de Bernoulli
     Arguments:
         proba: Distribution de proba de laquelle prendre un échantillon
     Return:
         sample: échantillon de la distribution
     """
-    sample = (np.random.random(proba.shape) < proba)*1
+    sample = (np.random.random(proba.shape) < proba) * 1
     return sample
-
-import scipy.misc
-import numpy as np
 
 
 def save_merged_images(images, size, path):
-    """ This function concatenate multiple images and saves them as a single image.
+    """This function concatenate multiple images and saves them as a single image.
     Args:
         images: images to concatenate
         size: number of columns and rows of images to be concatenated
         path: location to save merged image
-    Returns:
-        saves merged image in path
     """
     h, w = images.shape[1], images.shape[2]
 
@@ -61,55 +59,34 @@ def save_merged_images(images, size, path):
     for idx, image in enumerate(images):
         i = idx % size[1]
         j = int(idx / size[1])
-        merge_img[j * h:j * h + h, i * w:i * w + w] = image
+        merge_img[j * h : j * h + h, i * w : i * w + w] = image
 
     imageio.imwrite(path, merge_img)
 
 
-#sigmoid function
 def sigmoid(x):
-   return 1/(1+np.exp(-x))
+    """Sigmoid function"""
+    return 1 / (1 + np.exp(-x))
+
 
 class RBM(object):
-    def __init__(self, visible_dim, hidden_dim, lr):
-
+    def __init__(self, visible_dim, hidden_dim):
         self.visible_dim = visible_dim
         self.hidden_dim = hidden_dim
 
-        #create wieghts
-        self.W = np.random.normal(loc = 0., scale= 0.01, size=(self.visible_dim, self.hidden_dim))        
-        #create bias    
+        # create weights
+        self.W = np.random.normal(
+            loc=0.0, scale=0.01, size=(self.visible_dim, self.hidden_dim)
+        )
+        # Bias
         self.a_bias = np.zeros(visible_dim)
         self.b_bias = np.zeros(hidden_dim)
 
         # create input placeholders
-        self.visible_vect = np.empty((self.visible_dim), dtype= np.float32)
-        self.hidden_vect = np.empty((self.hidden_dim), dtype= np.float32)
+        self.visible_vect = np.empty((self.visible_dim), dtype=np.float32)
+        self.hidden_vect = np.empty((self.hidden_dim), dtype=np.float32)
 
-        # create optimizer
-        self.lr = lr
-        #self.optimizer = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=self.lr)
-
-        # construct graph(s)
-        # self.v_marg_steps = 0.1
-
-        # self.train_op = self._training(grads=self._contrastive_divergence())
-        # self.reconstruction = self._reconstruct(self.visible_vect)
-        # self.reconstruction_error = tf.reduce_mean(tf.square(self.visible_vect - self.reconstruction))
-        # self.inferred_hidden_activations = sample_bernoulli(self._entree_sortie_(self.visible_vect))
-        # self.v_marg = self._gibbs_sample_v_prime_given_v(self.visible_vect, steps=self.v_marg_steps)
-
-        # self._idx_pll = 0  # index used for pll calculation
-        # self.pll = self._pseudo_log_likelihood()
-
-        # # init variables
-        # init = tf.compat.v1.global_variables_initializer()
-        # self.sess = tf.compat.v1.Session()
-        # self.sess.run(init)
-
-        
-
-    def _entree_sortie_(self, visible_v):
+    def entree_sortie(self, visible_v):
         """Retourne la valeur des unités de sortie calculées à partir de la fonction sigmoïde
         ----------
         visible_v : vecteur des données d'entrée
@@ -118,8 +95,7 @@ class RBM(object):
         """
         return sigmoid(visible_v @ self.W + self.b_bias)
 
-    
-    def _sortie_entree_(self, hidden_v):
+    def sortie_entree(self, hidden_v):
         """Retourne la valeur des unités de sortie calculées à partir de la fonction sigmoïde
         ----------
         hidden_v : vecteur des données de sortie
@@ -128,160 +104,105 @@ class RBM(object):
         """
         return sigmoid(hidden_v @ np.transpose(self.W) + self.a_bias)
 
-    def _contrastive_divergence(self, epoch, batch_size, data_0):
-
+    def contrastive_divergence(self, data, epoch=10, batch_size=32, learning_rate=0.01):
+        """Entraîne le RBM avec l'algorithme de contrastive divergence.
+        ------
+        data : (np.array) données d'entraînement, de dimension (n_samples, self.visible_dim)
+        epoch : (int) nombre d'époques d'entraînement
+        batch size : (int) taille du batch
+        ------
+        Return : self (RBM entraîné)
+        """
         for i in range(epoch):
-
-            data = data_0[np.random.choice(data_0.shape[0], data_0.shape[0], replace= False),:]
+            # Shuffle the data
+            data_shuffled = data[
+                np.random.choice(data.shape[0], data.shape[0], replace=False), :
+            ]
             for j in range(0, data.shape[0], batch_size):
-                data_batch = data[j:min(batch_size + j, data.shape[0] - 1)]
-                line_batch = data_batch.shape[0]
+                data_batch = data_shuffled[
+                    j : min(batch_size + j, data_shuffled.shape[0] - 1)
+                ]
+                real_batch_size = data_batch.shape[0]  # might be lower than batch_size
 
-                #Positive phase
-                proba_h_sachant_v = self._entree_sortie_(data_batch)
+                # Positive phase
+                proba_h_sachant_v = self.entree_sortie(data_batch)
                 positive_hidden_samp = sample_bernoulli(proba_h_sachant_v)
-                positive_grad = -  np.transpose(data_batch) @ proba_h_sachant_v 
+                positive_grad = -np.transpose(data_batch) @ proba_h_sachant_v
 
-                #Negative phase start
+                # Negative phase start
                 hidden_samp = positive_hidden_samp
-                
-                visible_proba = self._sortie_entree_(hidden_samp)
+
+                visible_proba = self.sortie_entree(hidden_samp)
                 visible_samp = sample_bernoulli(visible_proba)
-                hidden_proba = self._entree_sortie_(visible_samp)
+                hidden_proba = self.entree_sortie(visible_samp)
                 hidden_samp = sample_bernoulli(hidden_proba)
 
                 negative_visible_samp = visible_samp
                 negative_hidden_samp = hidden_samp
-                
-                negative_grad = np.transpose(negative_visible_samp) @ negative_hidden_samp
 
-                #replace reductions by lr
-                grad_w_new = (negative_grad - positive_grad)
-                grad_visible_bias_new = np.sum((negative_visible_samp - data_batch), axis=0)
-                grad_hidden_bias_new = np.sum((negative_hidden_samp - proba_h_sachant_v),axis=0)
+                negative_grad = (
+                    np.transpose(negative_visible_samp) @ negative_hidden_samp
+                )
 
-                self.W += (self.lr/line_batch) * grad_w_new
-                self.b_bias -= (self.lr/line_batch) * grad_hidden_bias_new
-                self.a_bias -= (self.lr/line_batch) * grad_visible_bias_new
-            
-            h = self._entree_sortie_(data)
-            data_recons = self._sortie_entree_(h)
+                # replace reductions by lr
+                grad_w_new = negative_grad - positive_grad
+                grad_visible_bias_new = np.sum(
+                    (data_batch - negative_visible_samp), axis=0
+                )
+                grad_hidden_bias_new = np.sum(
+                    (proba_h_sachant_v - negative_hidden_samp), axis=0
+                )
+                # Update weights
+                self.W += (learning_rate / real_batch_size) * grad_w_new
+                self.a_bias += (learning_rate / real_batch_size) * grad_visible_bias_new
+                self.b_bias += (learning_rate / real_batch_size) * grad_hidden_bias_new
 
-            recc_err = np.sum((data - data_recons)**2)
+            h = self.entree_sortie(data)
+            data_recons = self.sortie_entree(h)
 
-            print(recc_err)
-        return None
-        
-    
-    # def _training(self, loss=None, grads=None):
-    #     """Sets up the training Ops.
-    #     Applies the gradients to all trainable variables.
-    #     If no loss is provided, gradients default to grads.
-    #     Args:
-    #         loss: loss to be minimized.
-    #         grads: gradients to be minimized.
-    #     Returns:
-    #         train_op: the Op for training.
-    #     """
-    #     train_op = self.optimizer.apply_gradients(list(zip(grads, tf.compat.V1.trainable_variables())))
-    #     return train_op
+            recc_err = np.sum((data - data_recons) ** 2)
 
+            print(f"Epoch: {i+1}/{epoch}. Reconstruction error: {recc_err}")
+        return self
 
-    # def _reconstruct(self, visible_input):
-    #     """ Reconstructs visible variables.
-    #     Args:
-    #         visible_input: visible_input to be reconstructed
-    #     Returns:
-    #         reconstruction
-    #     """
-    #     return self._sortie_entree_(sample_bernoulli(self._entree_sortie_(visible_input)))
+    def generer_image(self, nb_images, iter_gibs, im_shape, display=True):
+        """Génère des images grâce au RBM.
 
-    # def _gibbs_sample_v_prime_given_v(self, visible_input, steps=500):
-    #     """ Perform n-step Gibbs sampling chain in order to obtain the marginal distribution p(v|W,a,b) of the
-    #     visible variables.
-    #     Args:
-    #         visible_input: visible_input to initialize gibbs chain
-    #         steps: number of steps that Gibbs sampling chain is run for
-    #     """
-    #     v = visible_input
-    #     for step in range(steps):
-    #         v = sample_bernoulli(self._sortie_entree_(sample_bernoulli(self._entree_sortie_(v))))
-    #     return v
-
-    # def _free_energy(self, v):
-    #     """ FE(v) = −(aT)(v) − ∑_{i}log(1 + e^(b_{i} + W_{i}v))
-    #     """
-    #     return - tf.matmul(v, tf.expand_dims(self.a_bias, -1)) \
-    #         - tf.reduce_sum(tf.math.log(1 + tf.exp(self.b_bias + tf.matmul(v, self.W))), axis=1)
-
-    # def _pseudo_log_likelihood(self):
-    #     """ log(PL(v)) ≈ N * log(sigmoid(FE(v_{i}) − FE(v)))
-    #     """
-    #     v = sample_bernoulli(self.visible_vect)
-    #     vi = tf.concat(
-    #         [v[:, :self._idx_pll + 1], 1 - v[:, self._idx_pll + 1:self._idx_pll + 2], v[:, self._idx_pll + 2:]], 1)
-    #     self._idx_pll = (self._idx_pll + 1) % self.visible_dim
-    #     fe_x = self._free_energy(v)
-    #     fe_xi = self._free_energy(vi)
-    #     return tf.reduce_mean(tf.reduce_mean(
-    #         self.visible_dim * tf.math.log(tf.nn.sigmoid(tf.clip_by_value(fe_xi - fe_x, -20, 20))), axis=0))
-
-    # def update_model(self, visible_input):
-    #     """ Updates model parameters via single step of optimizer train_op.
-    #     Args:
-    #         visible_input: visible_input 
-    #     """
-    #     self.sess.run(self.train_op, feed_dict={self.visible_vect: visible_input})
-
-    # def eval_pll(self, visible_input):
-    #     """ Evalulates pseudo_log_likelihood that model assigns to visible_input.
-    #     Args:
-    #         visible_input: visible_input 
-    #     Returns:
-    #         pseudo_log_likelihood
-    #     """
-    #     return self.sess.run(self.pll, feed_dict={self.visible_vect: visible_input})
-
-    # def eval_rec_error(self, visible_input):
-    #     """ Evalulates single step reconstruction error of reconstruction of visible_input.
-    #     Args:
-    #         visible_input: visible_input
-    #     Returns:
-    #         reconstruction error
-    #     """
-    #     return self.sess.run(self.reconstruction_error, feed_dict={self.visible_vect: visible_input})
-
-    # def sample_v_marg(self, n_samples=100, size=784, epoch=0):
-    #     """ This function samples images via Gibbs sampling chain in order to inspect the marginal distribution of the
-    #     visible variables.
-    #     Args:
-    #         num_samples: an integer value representing the number of samples that will be generated by the model.
-    #         size: size of visible samples.
-    #         epoch: how many training epochs have occured before taking this sample.
-
-    #     """
-    #     cwd = os.getcwd()
-    #     batch_v_noise = np.random.rand(n_samples, size)
-    #     v_marg = self.sess.run(self.v_marg, feed_dict={self.visible_vect: batch_v_noise})
-    #     v_marg = v_marg.reshape([n_samples, 28, 28])
-    #     save_merged_images(images=v_marg, size=(10, 10), path=cwd)
-
-    # def save(self, file_path):
-    #     """ Saves model.
-    #     Args:
-    #         file_path: path of file to save model in.
-    #     """
-    #     saver = tf.compat.v1.train.Saver()
-    #     saver.save(self.sess, file_path)
-
-    # def load(self, file_path):
-    #     """ Loads model.
-    #     Args:
-    #         file_path: path of file to load model from.
-    #     """
-    #     saver = tf.compat.v1.train.Saver()
-    #     saver.restore(self.sess, file_path)
-
-    
+        Args:
+            nb_images (int): quantité d'images à générer
+            iter_gibs (int): nombre d'itération à utiliser pour le Gibs
+                sampling
+            im_shape (list-like) : taille de l'image générée (pour le reshape)
+            display (bool) : montrer les images ou non
+        Returns:
+            generated_images (np.array) : les images générées, un array de
+                dimension (nb_images, im_shape)
+        """
+        generated_images = np.empty([nb_images] + list(im_shape))
+        for i in range(nb_images):
+            # Initialisation aléatoire
+            v = sample_bernoulli(0.5 * np.ones(self.visible_dim))
+            # Gibs sampling
+            for j in range(iter_gibs):
+                p_h = self.entree_sortie(v)
+                h = sample_bernoulli(p_h)
+                p_v = self.sortie_entree(h)
+                v = sample_bernoulli(p_v)
+            # Reshape
+            img = v.reshape(im_shape)
+            generated_images[i, :] = img.copy()
+            if display:  # Display the generated image
+                plt.imshow(img)
+                plt.show()
+        return generated_images
 
 
+X, im_shape = lire_alpha_digits("Z")
+# Monre les 2 premiers samples
+for i in range(2):
+    plt.imshow(X[i, :].reshape(im_shape))
+    plt.show()
+
+rbm = RBM(X.shape[1], 64)
+rbm.contrastive_divergence(X, epoch=200, learning_rate=0.05)
+rbm.generer_image(4, 20, im_shape)
