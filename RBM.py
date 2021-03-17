@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from tools import *
 
 
-class RBM(object):
+class RBM:
     def __init__(self, visible_dim, hidden_dim):
         self.visible_dim = visible_dim
         self.hidden_dim = hidden_dim
@@ -134,7 +134,7 @@ class RBM(object):
 
 
 def main():
-    X, im_shape = lire_alpha_digits("Z")
+    X, im_shape = lire_alpha_digits("F")
     # Montre les 2 premiers samples
     for i in range(2):
         plt.imshow(X[i, :].reshape(im_shape))
