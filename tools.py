@@ -4,6 +4,7 @@ import os
 import scipy.io
 import string
 import imageio
+import idx2numpy
 
 
 def sigmoid(x):
@@ -44,6 +45,32 @@ def lire_alpha_digits(caractere):
     im_shape = data.shape[1:]
     data = data.reshape(data.shape[0], -1)
     return data, im_shape
+
+
+def lire_mnist():
+    """Lire les données MNIST.
+
+    Exemple:
+    X_train, y_train, X_test, y_test = lire_mnist()
+
+    Returns:
+        images_train (np.array):
+        label_train (np.array):
+        images_test (np.array):
+        label_test (np.array):
+    """
+    cwd = os.getcwd()
+    data_directory = cwd + "/data/mnist/"
+    files = [
+        "train-images-idx3-ubyte",
+        "train-labels-idx1-ubyte",
+        "t10k-images-idx3-ubyte",
+        "t10k-labels-idx1-ubyte",
+    ]
+    output = []
+    for file in files:
+        output.append(idx2numpy.convert_from_file(data_directory + file))
+    return tuple(output)
 
 
 def save_merged_images(images, size, path):
