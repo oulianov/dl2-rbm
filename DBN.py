@@ -1,4 +1,3 @@
-#%%
 import matplotlib.pyplot as plt
 import numpy as np
 from RBM import RBM
@@ -54,17 +53,14 @@ class DBN:
         return generated_images
 
 
-#%%
-X, im_shape = lire_alpha_digits("B")
-# Montre les 2 premiers samples
-for i in range(2):
-    plt.imshow(X[i, :].reshape(im_shape))
-    plt.colorbar()
-    plt.show()
+if __name__ == "__main__":
+    X, im_shape = lire_alpha_digits("B")
+    # Montre les 2 premiers samples
+    for i in range(2):
+        plt.imshow(X[i, :].reshape(im_shape))
+        plt.colorbar()
+        plt.show()
 
-#%%
-dbn = DBN(3, X.shape[1], 64)
-dbn.train(X, epoch=100, batch_size=32, learning_rate=0.1)
-_ = dbn.generer_image(4, 40, im_shape)
-
-# %%
+    dbn = DBN(3, X.shape[1], 64)
+    dbn.train(X, epoch=100, batch_size=32, learning_rate=0.1)
+    _ = dbn.generer_image(4, 40, im_shape)
