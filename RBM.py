@@ -127,7 +127,7 @@ class RBM:
         return generated_images
 
 
-def main():
+if __name__ == "__main__":
     X, im_shape = lire_alpha_digits("F")
     # Montre les 2 premiers samples
     for i in range(2):
@@ -137,7 +137,3 @@ def main():
     rbm = RBM(X.shape[1], 64)
     rbm.train(X, epoch=200, learning_rate=0.05)
     rbm.generer_image(4, 20, im_shape)
-
-
-if __name__ == "__main__":
-    main()
