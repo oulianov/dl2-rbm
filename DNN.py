@@ -1,10 +1,8 @@
-from lire_alpha_digits import lire_alpha_digits
-from sigmoid import sigmoid
+import numpy as np
 
 from RBM import RBM
 from DBN import DBN
-
-import numpy as np
+from tools import *
 
 def dsigmoid(x):
     z = sigmoid(x)

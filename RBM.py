@@ -1,40 +1,7 @@
-import scipy.misc
-import scipy.io
-import os
-import string
 import numpy as np
-import imageio
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 
-
-from sigmoid import sigmoid
-from lire_alpha_digits import lire_alpha_digits
-from sample_bernoulli import sample_bernoulli
-
-
-def save_merged_images(images, size, path):
-    """ This function concatenate multiple images and saves them as a single image.
-    Args:
-        images: images to concatenate
-        size: number of columns and rows of images to be concatenated
-        path: location to save merged image
-    Returns:
-        saves merged image in path
-    """
-    h, w = images.shape[1], images.shape[2]
-
-    merge_img = np.zeros((h * size[0], w * size[1]))
-
-    for idx, image in enumerate(images):
-        i = idx % size[1]
-        j = int(idx / size[1])
-        merge_img[j * h:j * h + h, i * w:i * w + w] = image
-
-    imageio.imwrite(path, merge_img)
-
-
-#sigmoid function
-
+from tools import *
 
 
 class RBM(object):
@@ -62,7 +29,8 @@ class RBM(object):
         Return : vecteur des unités de sortie
         """
         return sigmoid(visible_v @ self.W + self.b_bias)
-        #(39,320)
+        # (39,320)
+
     def sortie_entree(self, hidden_v):
         """Retourne la valeur des unités de sortie calculées à partir de la fonction sigmoïde
         ----------
@@ -165,11 +133,9 @@ class RBM(object):
         return generated_images
 
 
- 
-    
 def main():
     X, im_shape = lire_alpha_digits("Z")
-# Monre les 2 premiers samples
+    # Montre les 2 premiers samples
     for i in range(2):
         plt.imshow(X[i, :].reshape(im_shape))
         plt.show()
@@ -178,5 +144,6 @@ def main():
     rbm.train(X, epoch=200, learning_rate=0.05)
     rbm.generer_image(4, 20, im_shape)
 
-if __name__ =='__main__':
+
+if __name__ == "__main__":
     main()
