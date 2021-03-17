@@ -20,8 +20,8 @@ class DBN:
         for i in range(nb_couches - 1):
             self.model.append(RBM(hidden_dim, hidden_dim))
 
-    def pretrain_DNN(self, data, epoch=10, batch_size=4, learning_rate=0.01):
-        """Cette fonction vise entraîner la Deep Belief Network.
+    def train(self, data, epoch=10, batch_size=4, learning_rate=0.01):
+        """Cette fonction entraîne le Deep Belief Network.
         Paramètres:
         n_epochs:
         batch_size:
@@ -32,32 +32,20 @@ class DBN:
         for i in range(self.nb_couches):
             self.model[i].train(x, epoch, batch_size, learning_rate)
             x = self.model[i].entree_sortie(x)
-
         return self
 
     def generer_image(self, nb_images, iter_gibs, im_shape, display=True):
-        """Just applied Nicola's code to a multi layer case"""
         generated_images = np.empty([nb_images] + list(im_shape))
         for i in range(nb_images):
-            # Initialisation aléatoire
-            img = np.zeros(self.model[0].visible_dim)
-            for j in range(10):
-                v = sample_bernoulli(0.5 * np.ones(self.model[-1].visible_dim))
-                for k in range(iter_gibs):
-                    p_h = self.model[-1].entree_sortie(v)
-                    h = sample_bernoulli(p_h)
-                    p_v = self.model[-1].sortie_entree(h)
-                    v = sample_bernoulli(p_v)
-                transf = v
-                for layer in range(1, self.nb_couches):
-                    transf = self.model[-(layer + 1)].sortie_entree(transf)
-                    transf = sample_bernoulli(transf)
-                img += transf
-            # Magic sampling ?
-            img = sample_bernoulli(img)
-            img = img.reshape(im_shape)
-            # Magic rescale ?
-            img = 1 - img
+            # Gibs sampling sur le dernier layer
+            v = self.model[-1].gibs_sampling(iter_gibs)
+            # Propage le résultat dans les layers précédents
+            for layer in range(1, self.nb_couches):
+                v = self.model[-(layer + 1)].sortie_entree(v)
+            # Binariser
+            v = v > 0.5
+            # Reshape
+            img = v.reshape(im_shape)
             generated_images[i, :] = img.copy()
             if display:  # Display the generated image
                 plt.imshow(img)
@@ -75,8 +63,8 @@ for i in range(2):
     plt.show()
 
 #%%
-dbn = DBN(3, X.shape[1], 30)
-dbn.pretrain_DNN(X, epoch=20, batch_size=5, learning_rate=0.1)
-_ = dbn.generer_image(4, 20, im_shape)
+dbn = DBN(3, X.shape[1], 64)
+dbn.train(X, epoch=100, batch_size=32, learning_rate=0.1)
+_ = dbn.generer_image(4, 40, im_shape)
 
 # %%

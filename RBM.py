@@ -61,45 +61,45 @@ class RBM:
                 real_batch_size = data_batch.shape[0]  # might be lower than batch_size
 
                 # Positive phase
-                proba_h_sachant_v = self.entree_sortie(data_batch)
-                positive_hidden_samp = sample_bernoulli(proba_h_sachant_v)
-                positive_grad = -np.transpose(data_batch) @ proba_h_sachant_v
+                v_0 = data_batch
+                p_h_v_0 = self.entree_sortie(v_0)
+                h_0 = sample_bernoulli(p_h_v_0)
 
                 # Negative phase start
-                hidden_samp = positive_hidden_samp
+                p_v_h_0 = self.sortie_entree(h_0)
+                v_1 = sample_bernoulli(p_v_h_0)
+                p_h_v_1 = self.entree_sortie(v_1)
 
-                visible_proba = self.sortie_entree(hidden_samp)
-                visible_samp = sample_bernoulli(visible_proba)
-                hidden_proba = self.entree_sortie(visible_samp)
-                hidden_samp = sample_bernoulli(hidden_proba)
+                # Gradient
+                d_a = np.sum(v_0 - v_1, axis=0)
+                d_b = np.sum(p_h_v_0 - p_h_v_1, axis=0)
+                d_W = v_0.T @ p_h_v_0 - v_1.T @ p_h_v_1
 
-                negative_visible_samp = visible_samp
-                negative_hidden_samp = hidden_samp
+                # Mise à jour des poids
+                self.W += (learning_rate / real_batch_size) * d_W
+                self.a_bias += (learning_rate / real_batch_size) * d_a
+                self.b_bias += (learning_rate / real_batch_size) * d_b
 
-                negative_grad = (
-                    np.transpose(negative_visible_samp) @ negative_hidden_samp
-                )
-
-                # replace reductions by lr
-                grad_w_new = negative_grad - positive_grad
-                grad_visible_bias_new = np.sum(
-                    (data_batch - negative_visible_samp), axis=0
-                )
-                grad_hidden_bias_new = np.sum(
-                    (proba_h_sachant_v - negative_hidden_samp), axis=0
-                )
-                # Update weights
-                self.W += (learning_rate / real_batch_size) * grad_w_new
-                self.a_bias += (learning_rate / real_batch_size) * grad_visible_bias_new
-                self.b_bias += (learning_rate / real_batch_size) * grad_hidden_bias_new
-
+            # Calcul de l'erreur de reconstruction
             h = self.entree_sortie(data)
             data_recons = self.sortie_entree(h)
-
             recc_err = np.sum((data - data_recons) ** 2)
-
             print(f"Epoch: {i+1}/{epoch}. Reconstruction error: {recc_err}")
         return self
+
+    def gibs_sampling(self, iter_gibs=20, init=False):
+        if init is False:
+            # Initialisation aléatoire
+            v = sample_bernoulli(0.5 * np.ones(self.visible_dim))
+        else:
+            # Initialisation avec un vecteur donné
+            v = init
+        for _ in range(iter_gibs):
+            p_h = self.entree_sortie(v)
+            h = sample_bernoulli(p_h)
+            p_v = self.sortie_entree(h)
+            v = sample_bernoulli(p_v)
+        return v
 
     def generer_image(self, nb_images, iter_gibs, im_shape, display=True):
         """Génère des images grâce au RBM.
@@ -116,14 +116,8 @@ class RBM:
         """
         generated_images = np.empty([nb_images] + list(im_shape))
         for i in range(nb_images):
-            # Initialisation aléatoire
-            v = sample_bernoulli(0.5 * np.ones(self.visible_dim))
             # Gibs sampling
-            for _ in range(iter_gibs):
-                p_h = self.entree_sortie(v)
-                h = sample_bernoulli(p_h)
-                p_v = self.sortie_entree(h)
-                v = sample_bernoulli(p_v)
+            v = self.gibs_sampling(iter_gibs)
             # Reshape
             img = v.reshape(im_shape)
             generated_images[i, :] = img.copy()
