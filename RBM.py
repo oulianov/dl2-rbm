@@ -1,43 +1,10 @@
-import scipy.misc
-import scipy.io
-import os
-import string
 import numpy as np
-import imageio
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
+
+from tools import *
 
 
-from sigmoid import sigmoid
-from lire_alpha_digits import lire_alpha_digits
-from sample_bernoulli import sample_bernoulli
-
-
-def save_merged_images(images, size, path):
-    """ This function concatenate multiple images and saves them as a single image.
-    Args:
-        images: images to concatenate
-        size: number of columns and rows of images to be concatenated
-        path: location to save merged image
-    Returns:
-        saves merged image in path
-    """
-    h, w = images.shape[1], images.shape[2]
-
-    merge_img = np.zeros((h * size[0], w * size[1]))
-
-    for idx, image in enumerate(images):
-        i = idx % size[1]
-        j = int(idx / size[1])
-        merge_img[j * h:j * h + h, i * w:i * w + w] = image
-
-    imageio.imwrite(path, merge_img)
-
-
-#sigmoid function
-
-
-
-class RBM(object):
+class RBM:
     def __init__(self, visible_dim, hidden_dim):
         self.visible_dim = visible_dim
         self.hidden_dim = hidden_dim
@@ -62,7 +29,8 @@ class RBM(object):
         Return : vecteur des unités de sortie
         """
         return sigmoid(visible_v @ self.W + self.b_bias)
-        #(39,320)
+        # (39,320)
+
     def sortie_entree(self, hidden_v):
         """Retourne la valeur des unités de sortie calculées à partir de la fonction sigmoïde
         ----------
@@ -93,45 +61,45 @@ class RBM(object):
                 real_batch_size = data_batch.shape[0]  # might be lower than batch_size
 
                 # Positive phase
-                proba_h_sachant_v = self.entree_sortie(data_batch)
-                positive_hidden_samp = sample_bernoulli(proba_h_sachant_v)
-                positive_grad = -np.transpose(data_batch) @ proba_h_sachant_v
+                v_0 = data_batch
+                p_h_v_0 = self.entree_sortie(v_0)
+                h_0 = sample_bernoulli(p_h_v_0)
 
                 # Negative phase start
-                hidden_samp = positive_hidden_samp
+                p_v_h_0 = self.sortie_entree(h_0)
+                v_1 = sample_bernoulli(p_v_h_0)
+                p_h_v_1 = self.entree_sortie(v_1)
 
-                visible_proba = self.sortie_entree(hidden_samp)
-                visible_samp = sample_bernoulli(visible_proba)
-                hidden_proba = self.entree_sortie(visible_samp)
-                hidden_samp = sample_bernoulli(hidden_proba)
+                # Gradient
+                d_a = np.sum(v_0 - v_1, axis=0)
+                d_b = np.sum(p_h_v_0 - p_h_v_1, axis=0)
+                d_W = v_0.T @ p_h_v_0 - v_1.T @ p_h_v_1
 
-                negative_visible_samp = visible_samp
-                negative_hidden_samp = hidden_samp
+                # Mise à jour des poids
+                self.W += (learning_rate / real_batch_size) * d_W
+                self.a_bias += (learning_rate / real_batch_size) * d_a
+                self.b_bias += (learning_rate / real_batch_size) * d_b
 
-                negative_grad = (
-                    np.transpose(negative_visible_samp) @ negative_hidden_samp
-                )
-
-                # replace reductions by lr
-                grad_w_new = negative_grad - positive_grad
-                grad_visible_bias_new = np.sum(
-                    (data_batch - negative_visible_samp), axis=0
-                )
-                grad_hidden_bias_new = np.sum(
-                    (proba_h_sachant_v - negative_hidden_samp), axis=0
-                )
-                # Update weights
-                self.W += (learning_rate / real_batch_size) * grad_w_new
-                self.a_bias += (learning_rate / real_batch_size) * grad_visible_bias_new
-                self.b_bias += (learning_rate / real_batch_size) * grad_hidden_bias_new
-
+            # Calcul de l'erreur de reconstruction
             h = self.entree_sortie(data)
             data_recons = self.sortie_entree(h)
-
             recc_err = np.sum((data - data_recons) ** 2)
-
             print(f"Epoch: {i+1}/{epoch}. Reconstruction error: {recc_err}")
         return self
+
+    def gibs_sampling(self, iter_gibs=20, init=False):
+        if init is False:
+            # Initialisation aléatoire
+            v = sample_bernoulli(0.5 * np.ones(self.visible_dim))
+        else:
+            # Initialisation avec un vecteur donné
+            v = init
+        for _ in range(iter_gibs):
+            p_h = self.entree_sortie(v)
+            h = sample_bernoulli(p_h)
+            p_v = self.sortie_entree(h)
+            v = sample_bernoulli(p_v)
+        return v
 
     def generer_image(self, nb_images, iter_gibs, im_shape, display=True):
         """Génère des images grâce au RBM.
@@ -148,14 +116,8 @@ class RBM(object):
         """
         generated_images = np.empty([nb_images] + list(im_shape))
         for i in range(nb_images):
-            # Initialisation aléatoire
-            v = sample_bernoulli(0.5 * np.ones(self.visible_dim))
             # Gibs sampling
-            for _ in range(iter_gibs):
-                p_h = self.entree_sortie(v)
-                h = sample_bernoulli(p_h)
-                p_v = self.sortie_entree(h)
-                v = sample_bernoulli(p_v)
+            v = self.gibs_sampling(iter_gibs)
             # Reshape
             img = v.reshape(im_shape)
             generated_images[i, :] = img.copy()
@@ -165,11 +127,9 @@ class RBM(object):
         return generated_images
 
 
- 
-    
-def main():
-    X, im_shape = lire_alpha_digits("Z")
-# Monre les 2 premiers samples
+if __name__ == "__main__":
+    X, im_shape = lire_alpha_digits("F")
+    # Montre les 2 premiers samples
     for i in range(2):
         plt.imshow(X[i, :].reshape(im_shape))
         plt.show()
@@ -177,6 +137,3 @@ def main():
     rbm = RBM(X.shape[1], 64)
     rbm.train(X, epoch=200, learning_rate=0.05)
     rbm.generer_image(4, 20, im_shape)
-
-if __name__ =='__main__':
-    main()
