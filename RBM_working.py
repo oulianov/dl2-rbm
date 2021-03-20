@@ -198,7 +198,7 @@ class RBM(object):
 
 
 X, im_shape = lire_alpha_digits("Z")
-# Monre les 2 premiers samples
+# Montre les 2 premiers samples
 for i in range(2):
     plt.imshow(X[i, :].reshape(im_shape))
     plt.show()
