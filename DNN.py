@@ -42,10 +42,26 @@ class Layer:
         self.d_activation = d_activation
 
     def forward(self, x):
-        return self.activation(x @ self.W + self.b)
+        self.y = self.activation(x @ self.W + self.b)
+        return self.y
 
-    def backward(self, y, true_y):
-        pass
+    def backward(self, estimated_y, true_y, previous_y, lr, next_layer=None):
+        # d L / d x pour une fonction sigmoid, et pour le dernier layer
+        if next_layer is None:
+            c = estimated_y - true_y  # (batch_size, output_dim)
+        else:
+            # c_j = next_layer.W[j,:] @ next_layer.c  * next_layer.y[j] * ( 1 - next_layer.y[j])
+            c = (next_layer.W @ next_layer.c.T).T * next_layer.y * (1 - next_layer.y)
+            #   (input_dim, output_dim) @ (batch_size, output_dim) * (batch_size, output_dim)
+        self.c = c
+        batch_size = c.shape[0]
+        # d L / d W_j
+        d_W = (c.reshape(-1, batch_size) @ previous_y.reshape(batch_size, -1)).T
+        # d L / d b_j
+        d_b = c.sum(axis=0)
+        # Gradient descent
+        self.W -= (lr / batch_size) * d_W
+        self.b -= (lr / batch_size) * d_b
 
     def init_Layer_to_RBM(self, rbm: RBM):
         try:
@@ -62,14 +78,19 @@ class Layer:
 
 
 class DNN:
-    def __init__(self, input_dim, hidden_dim, nb_layers, output_dim):
+    def __init__(self, layer_sizes):
         # Input Layer
-        self.layers = [Layer(input_dim, hidden_dim)]
+        self.layers = []
         # Middle dimensions
-        for i in range(nb_layers):
-            self.layers.append(Layer(hidden_dim, hidden_dim))
-        # Output Layer
-        self.layers.append(Layer(hidden_dim, output_dim, softmax, d_softmax))
+        for i in range(len(layer_sizes) - 1):
+            if i + 1 < len(layer_sizes) - 1:
+                # Middle layer
+                self.layers.append(Layer(layer_sizes[i], layer_sizes[i + 1]))
+            else:
+                # Output layer
+                self.layers.append(
+                    Layer(layer_sizes[i], layer_sizes[i + 1], softmax, d_softmax)
+                )
 
     def init_DNN_with_DBN(self, DBN):
         for i, rbm in DBN.model:
@@ -81,8 +102,48 @@ class DNN:
             y = layer.forward(y)
         return y
 
-    def backward(self, y, true_y):
-        pass
+    def entree_sortie_reseau(self, data: np.array) -> list:
+        """prend en argument un DNN, des données en entrée du
+        réseau et qui retourne dans un tableau les sorties sur chaque
+        couche cachées du réseau ainsi que les probabilités sur les
+        unités de sortie. Cette fonction pourra utiliser les fonctions
+        entree_sortie_RBM et calcul_softmax
+
+        Args:
+            dnn (DNN): [description]
+            data (np.array): [description]
+
+        Returns:
+            list: valeur des sorties sur chaque couche
+        """
+        valeur_layer = []
+        y = data
+        for layer in dnn.layers:
+            y = layer.forward(y)
+            valeur_layer.append(y)
+        # La dernière valeur est la proba
+        return valeur_layer
+
+    def backward(self, valeur_layer, true_y, lr):
+        for i in range(len(self.layers) - 1, 0, -1):
+            layer = self.layers[i]
+            estimated_y = valeur_layer[i]
+            previous_y = valeur_layer[i - 1]
+            if i < len(self.layers) - 1:
+                next_layer = self.layers[i + 1]
+            else:
+                next_layer = None
+            previous_y = layer.backward(estimated_y, true_y, previous_y, lr, next_layer)
+
+    def train(self, x, y, epochs=10, lr=0.1):
+        for i in range(epochs):
+            valeur_layer = self.entree_sortie_reseau(x)
+            print(f"Epoch {i+1} : Loss {self.loss(valeur_layer[-1], y)}")
+            self.backward(valeur_layer, y, lr)
+
+    def loss(self, y, true_y):
+        loss = true_y * np.log(y) + (1 - true_y) * np.log(1 - y)
+        return -loss.mean()
 
     def fine_tuning(self, X, y):
         pass
@@ -103,30 +164,18 @@ def calcul_softmax(rbm: RBM, data: np.array) -> np.array:
     return softmax(RBM.entree_sortie(data))
 
 
-def entree_sortie_reseau(dnn: DNN, data: np.array) -> list:
-    """prend en argument un DNN, des données en entrée du
-    réseau et qui retourne dans un tableau les sorties sur chaque
-    couche cachées du réseau ainsi que les probabilités sur les
-    unités de sortie. Cette fonction pourra utiliser les fonctions
-    entree_sortie_RBM et calcul_softmax
-
-    Args:
-        dnn (DNN): [description]
-        data (np.array): [description]
-
-    Returns:
-        list: valeur des sorties sur chaque couche
-    """
-    valeur_layer = [data]
-    y = data
-    for layer in dnn.layers:
-        y = layer.forward(y)
-        valeur_layer.append(y)
-    # La dernière valeur est la proba
-    return valeur_layer
+def one_hot_encode(y, nb_classes):
+    return np.eye(nb_classes)[y]
 
 
 if __name__ == "__main__":
-    dnn = DNN(320, 8, 3, 2)
-    X, im_shape = lire_alpha_digits("B")
-    dnn.forward(X).shape  # Should be 39, 2
+    X_train, y_train, X_test, y_test = lire_mnist()
+    y_train = one_hot_encode(y_train, 10)
+    y_test = one_hot_encode(y_test, 10)
+    # Flatten
+    X_test = X_test.reshape(X_test.shape[0], -1)
+    dnn = DNN([784, 128, 10])
+    dnn.train(X_test, y_test)
+
+    # X, im_shape = lire_alpha_digits("B")
+    # dnn.forward(X).shape  # Should be 39, 2
