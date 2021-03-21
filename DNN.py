@@ -62,9 +62,7 @@ class DNN:
         for i in range(len(layer_sizes) - 1):
             if i + 1 < len(layer_sizes) - 1:
                 # Middle layer : relu activation
-                self.layers.append(
-                    Layer(layer_sizes[i], layer_sizes[i + 1])
-                )
+                self.layers.append(Layer(layer_sizes[i], layer_sizes[i + 1]))
             else:
                 # Output layer : sigmoid activation
                 self.layers.append(
@@ -137,8 +135,11 @@ class DNN:
         loss = true_y * np.log(y) + (1 - true_y) * np.log(1 - y)
         return -loss.mean()
 
-    def fine_tuning(self, X, y):
+    def fine_tuning(self, x, y):
         pass
+
+    def predict(self, x):
+        return (self.forward(x) > 0.5).astype(int)
 
 
 def calcul_softmax(rbm: RBM, data: np.array) -> np.array:
@@ -160,14 +161,21 @@ def one_hot_encode(y, nb_classes):
     return np.eye(nb_classes)[y]
 
 
+def test_dnn(dnn, X_test, y_test):
+    """Returns error rate"""
+    y_predict = dnn.predict(X_test)
+    accuracy = np.mean(y_test == y_predict)
+    error_rate = 1 - accuracy
+    return error_rate
+
+
 if __name__ == "__main__":
     X_train, y_train, X_test, y_test = lire_mnist()
     y_train = one_hot_encode(y_train, 10)
     y_test = one_hot_encode(y_test, 10)
     # Flatten
+    X_train = X_train.reshape(X_train.shape[0], -1)
     X_test = X_test.reshape(X_test.shape[0], -1)
-    dnn = DNN([784, 64, 64, 64, 10])
-    dnn.train(X_test, y_test, learning_rate=0.5, epochs=10)
-
-    # X, im_shape = lire_alpha_digits("B")
-    # dnn.forward(X).shape  # Should be 39, 2
+    dnn = DNN([784, 128, 10])
+    dnn.train(X_train, y_train, learning_rate=0.5, epochs=10)
+    print(f"Error rate: {test_dnn(dnn, X_test, y_test)}")
