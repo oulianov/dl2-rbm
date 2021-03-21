@@ -62,7 +62,9 @@ class DNN:
         for i in range(len(layer_sizes) - 1):
             if i + 1 < len(layer_sizes) - 1:
                 # Middle layer : relu activation
-                self.layers.append(Layer(layer_sizes[i], layer_sizes[i + 1]))
+                self.layers.append(
+                    Layer(layer_sizes[i], layer_sizes[i + 1])
+                )
             else:
                 # Output layer : sigmoid activation
                 self.layers.append(
@@ -165,7 +167,7 @@ if __name__ == "__main__":
     # Flatten
     X_test = X_test.reshape(X_test.shape[0], -1)
     dnn = DNN([784, 64, 64, 64, 10])
-    dnn.train(X_test, y_test, learning_rate=0.5)
+    dnn.train(X_test, y_test, learning_rate=0.5, epochs=10)
 
     # X, im_shape = lire_alpha_digits("B")
     # dnn.forward(X).shape  # Should be 39, 2
