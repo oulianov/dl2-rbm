@@ -129,7 +129,7 @@ class DNN:
                 # Backward pass
                 self.backward(valeur_layer, y_batch, learning_rate)
             # Print progress
-            print(f"Epoch {i+1} : Loss {self.loss(valeur_layer[-1], y_batch)}")
+            print(f"Epoch {i+1} : Loss {self.loss(self.forward(x), y)}")
 
     def loss(self, y, true_y):
         loss = true_y * np.log(y) + (1 - true_y) * np.log(1 - y)
