@@ -5,33 +5,6 @@ from DBN import DBN
 from tools import *
 
 
-<<<<<<< HEAD
-def d_sigmoid(x):
-    z = sigmoid(x)
-    return z * (1 - z)
-
-
-def softmax(x):
-    z = np.exp(x)
-    return z / np.sum(z, axis=1, keepdims=True)
-
-
-def d_softmax(x):
-    z = softmax(x)
-    return -z.T @ z + np.diagflat(z)
-
-
-def d_loss_x(x, y):
-    return softmax(x) - np.diagflat(y)
-
-
-def d_loss_w(x_ant, x_post, y):
-    m = x_ant.shape[0]
-    return x_ant.T @ (x_post - y)/m
-
-
-=======
->>>>>>> 08bdb9e1f36228f7dc54c224d8de99b2a1bd3fcf
 class Layer:
     def __init__(
         self,
@@ -97,7 +70,7 @@ class DNN:
                 )
 
     def init_DNN_with_DBN(self, DBN):
-        for i, rbm in DBN.model:
+        for i, rbm in enumerate(DBN.model):
             self.layers[i].init_Layer_to_RBM(rbm)
 
     def forward(self, x):
@@ -122,7 +95,7 @@ class DNN:
         """
         valeur_layer = []
         y = data
-        for layer in dnn.layers:
+        for layer in self.layers:
             y = layer.forward(y)
             valeur_layer.append(y)
         # La dernière valeur est la proba
@@ -139,7 +112,7 @@ class DNN:
                 next_layer = None
             previous_y = layer.backward(true_y, previous_y, next_layer, lr)
 
-    def train(self, x, y, epochs=10, learning_rate=0.1, batch_size=128):
+    def train(self, x, y, epochs=10, batch_size=128, learning_rate=0.1):
         for i in range(epochs):
             # Shuffle data
             random_index = np.random.choice(x.shape[0], x.shape[0], replace=False)
@@ -206,3 +179,5 @@ if __name__ == "__main__":
     dnn = DNN([784, 128, 10])
     dnn.train(X_train, y_train, learning_rate=0.5, epochs=10)
     print(f"Error rate: {test_dnn(dnn, X_test, y_test)}")
+
+    
