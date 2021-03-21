@@ -25,7 +25,8 @@ def d_loss_x(x, y):
 
 
 def d_loss_w(x_ant, x_post, y):
-    pass
+    m = x_ant.shape[0]
+    return x_ant.T @ (x_post - y)/m
 
 
 class Layer:
