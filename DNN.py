@@ -47,18 +47,22 @@ class Layer:
 
     def backward(self, estimated_y, true_y, previous_y, lr, next_layer=None):
         # d L / d x pour une fonction sigmoid, et pour le dernier layer
+        # au lieu d'utiliser previous_y, estimated_y
+        # faire appel à previous_layer.y ou self.y
         if next_layer is None:
             c = estimated_y - true_y  # (batch_size, output_dim)
         else:
             # c_j = next_layer.W[j,:] @ next_layer.c  * next_layer.y[j] * ( 1 - next_layer.y[j])
-            c = (next_layer.W @ next_layer.c.T).T * next_layer.y * (1 - next_layer.y)
+            c = next_layer.d_previous * self.d_activation(next_layer.y)
             #   (input_dim, output_dim) @ (batch_size, output_dim) * (batch_size, output_dim)
         self.c = c
         batch_size = c.shape[0]
         # d L / d W_j
-        d_W = (c.reshape(-1, batch_size) @ previous_y.reshape(batch_size, -1)).T
+        d_W = previous_y.T @ c
         # d L / d b_j
         d_b = c.sum(axis=0)
+        # Mémoriser le gradient
+        self.d_previous = c @ self.W.T
         # Gradient descent
         self.W -= (lr / batch_size) * d_W
         self.b -= (lr / batch_size) * d_b
@@ -135,11 +139,24 @@ class DNN:
                 next_layer = None
             previous_y = layer.backward(estimated_y, true_y, previous_y, lr, next_layer)
 
-    def train(self, x, y, epochs=10, lr=0.1):
+    def train(self, x, y, epochs=10, learning_rate=0.1, batch_size=128):
         for i in range(epochs):
-            valeur_layer = self.entree_sortie_reseau(x)
-            print(f"Epoch {i+1} : Loss {self.loss(valeur_layer[-1], y)}")
-            self.backward(valeur_layer, y, lr)
+            # Shuffle data
+            random_index = np.random.choice(x.shape[0], x.shape[0], replace=False)
+            x_shuffled = x[random_index, :]
+            y_shuffled = y[random_index, :]
+            # Perform gradient descent for each batch
+            for j in range(0, x.shape[0], batch_size):
+                # Select data for batch
+                max_index = min(batch_size + j, x_shuffled.shape[0] - 1)
+                x_batch = x_shuffled[j:max_index]
+                y_batch = y_shuffled[j:max_index]
+                # Forward pass
+                valeur_layer = self.entree_sortie_reseau(x_batch)
+                # Backward pass
+                self.backward(valeur_layer, y_batch, learning_rate)
+            # Print progress
+            print(f"Epoch {i+1} : Loss {self.loss(valeur_layer[-1], y_batch)}")
 
     def loss(self, y, true_y):
         loss = true_y * np.log(y) + (1 - true_y) * np.log(1 - y)
