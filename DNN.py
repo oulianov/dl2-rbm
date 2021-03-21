@@ -5,29 +5,6 @@ from DBN import DBN
 from tools import *
 
 
-def d_sigmoid(x):
-    z = sigmoid(x)
-    return z * (1 - z)
-
-
-def softmax(x):
-    z = np.exp(x)
-    return z / np.sum(z, axis=1, keepdims=True)
-
-
-def d_softmax(x):
-    z = softmax(x)
-    return -z.T @ z + np.diagflat(z)
-
-
-def d_loss_x(x, y):
-    return softmax(x) - np.diagflat(y)
-
-
-def d_loss_w(x_ant, x_post, y):
-    pass
-
-
 class Layer:
     def __init__(
         self,
@@ -42,28 +19,24 @@ class Layer:
         self.d_activation = d_activation
 
     def forward(self, x):
-        self.y = self.activation(x @ self.W + self.b)
+        self.logits = x @ self.W + self.b
+        self.y = self.activation(self.logits)
         return self.y
 
-    def backward(self, estimated_y, true_y, previous_y, lr, next_layer=None):
-        # d L / d x pour une fonction sigmoid, et pour le dernier layer
-        # au lieu d'utiliser previous_y, estimated_y
-        # faire appel à previous_layer.y ou self.y
+    def backward(self, true_y, previous_y, next_layer, lr):
+        # d L / d x pour une cross-entropy loss
         if next_layer is None:
-            c = estimated_y - true_y  # (batch_size, output_dim)
+            c = self.y - true_y
         else:
-            # c_j = next_layer.W[j,:] @ next_layer.c  * next_layer.y[j] * ( 1 - next_layer.y[j])
-            c = next_layer.d_previous * self.d_activation(next_layer.y)
-            #   (input_dim, output_dim) @ (batch_size, output_dim) * (batch_size, output_dim)
-        self.c = c
-        batch_size = c.shape[0]
-        # d L / d W_j
+            c = next_layer.d_logits * self.d_activation(self.y)
+        # d L / d W
         d_W = previous_y.T @ c
-        # d L / d b_j
+        # d L / d b
         d_b = c.sum(axis=0)
-        # Mémoriser le gradient
-        self.d_previous = c @ self.W.T
+        # Mémoriser le gradient de la sortie de la couche avant activation
+        self.d_logits = c @ self.W.T
         # Gradient descent
+        batch_size = c.shape[0]
         self.W -= (lr / batch_size) * d_W
         self.b -= (lr / batch_size) * d_b
 
@@ -88,10 +61,10 @@ class DNN:
         # Middle dimensions
         for i in range(len(layer_sizes) - 1):
             if i + 1 < len(layer_sizes) - 1:
-                # Middle layer
+                # Middle layer : relu activation
                 self.layers.append(Layer(layer_sizes[i], layer_sizes[i + 1]))
             else:
-                # Output layer
+                # Output layer : sigmoid activation
                 self.layers.append(
                     Layer(layer_sizes[i], layer_sizes[i + 1], softmax, d_softmax)
                 )
@@ -137,7 +110,7 @@ class DNN:
                 next_layer = self.layers[i + 1]
             else:
                 next_layer = None
-            previous_y = layer.backward(estimated_y, true_y, previous_y, lr, next_layer)
+            previous_y = layer.backward(true_y, previous_y, next_layer, lr)
 
     def train(self, x, y, epochs=10, learning_rate=0.1, batch_size=128):
         for i in range(epochs):
@@ -191,8 +164,8 @@ if __name__ == "__main__":
     y_test = one_hot_encode(y_test, 10)
     # Flatten
     X_test = X_test.reshape(X_test.shape[0], -1)
-    dnn = DNN([784, 256, 10])
-    dnn.train(X_test, y_test)
+    dnn = DNN([784, 64, 64, 64, 10])
+    dnn.train(X_test, y_test, learning_rate=0.5)
 
     # X, im_shape = lire_alpha_digits("B")
     # dnn.forward(X).shape  # Should be 39, 2
