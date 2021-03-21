@@ -174,7 +174,7 @@ if __name__ == "__main__":
     y_test = one_hot_encode(y_test, 10)
     # Flatten
     X_test = X_test.reshape(X_test.shape[0], -1)
-    dnn = DNN([784, 128, 10])
+    dnn = DNN([784, 256, 10])
     dnn.train(X_test, y_test)
 
     # X, im_shape = lire_alpha_digits("B")
