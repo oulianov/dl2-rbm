@@ -11,6 +11,29 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
+def d_sigmoid(x):
+    z = sigmoid(x)
+    return z * (1 - z)
+
+
+def softmax(x):
+    z = np.exp(x - np.max(x, axis=1, keepdims=True))
+    return z / np.sum(z, axis=1, keepdims=True)
+
+
+def d_softmax(x):
+    z = softmax(x)
+    return -z.T @ z + np.diagflat(z)
+
+
+def relu(x):
+    return x * (x > 0)
+
+
+def d_relu(x):
+    return (x > 0) * 1  # to return int
+
+
 def sample_bernoulli(proba):
     """Prend un échantillon d'une distribution de Bernoulli
     Arguments:

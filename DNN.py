@@ -5,6 +5,7 @@ from DBN import DBN
 from tools import *
 
 
+<<<<<<< HEAD
 def d_sigmoid(x):
     z = sigmoid(x)
     return z * (1 - z)
@@ -29,6 +30,8 @@ def d_loss_w(x_ant, x_post, y):
     return x_ant.T @ (x_post - y)/m
 
 
+=======
+>>>>>>> 08bdb9e1f36228f7dc54c224d8de99b2a1bd3fcf
 class Layer:
     def __init__(
         self,
@@ -43,24 +46,24 @@ class Layer:
         self.d_activation = d_activation
 
     def forward(self, x):
-        self.y = self.activation(x @ self.W + self.b)
+        self.logits = x @ self.W + self.b
+        self.y = self.activation(self.logits)
         return self.y
 
-    def backward(self, estimated_y, true_y, previous_y, lr, next_layer=None):
-        # d L / d x pour une fonction sigmoid, et pour le dernier layer
+    def backward(self, true_y, previous_y, next_layer, lr):
+        # d L / d x pour une cross-entropy loss
         if next_layer is None:
-            c = estimated_y - true_y  # (batch_size, output_dim)
+            c = self.y - true_y
         else:
-            # c_j = next_layer.W[j,:] @ next_layer.c  * next_layer.y[j] * ( 1 - next_layer.y[j])
-            c = (next_layer.W @ next_layer.c.T).T * next_layer.y * (1 - next_layer.y)
-            #   (input_dim, output_dim) @ (batch_size, output_dim) * (batch_size, output_dim)
-        self.c = c
-        batch_size = c.shape[0]
-        # d L / d W_j
-        d_W = (c.reshape(-1, batch_size) @ previous_y.reshape(batch_size, -1)).T
-        # d L / d b_j
+            c = next_layer.d_logits * self.d_activation(self.y)
+        # d L / d W
+        d_W = previous_y.T @ c
+        # d L / d b
         d_b = c.sum(axis=0)
+        # Mémoriser le gradient de la sortie de la couche avant activation
+        self.d_logits = c @ self.W.T
         # Gradient descent
+        batch_size = c.shape[0]
         self.W -= (lr / batch_size) * d_W
         self.b -= (lr / batch_size) * d_b
 
@@ -85,10 +88,10 @@ class DNN:
         # Middle dimensions
         for i in range(len(layer_sizes) - 1):
             if i + 1 < len(layer_sizes) - 1:
-                # Middle layer
+                # Middle layer : relu activation
                 self.layers.append(Layer(layer_sizes[i], layer_sizes[i + 1]))
             else:
-                # Output layer
+                # Output layer : sigmoid activation
                 self.layers.append(
                     Layer(layer_sizes[i], layer_sizes[i + 1], softmax, d_softmax)
                 )
@@ -134,20 +137,36 @@ class DNN:
                 next_layer = self.layers[i + 1]
             else:
                 next_layer = None
-            previous_y = layer.backward(estimated_y, true_y, previous_y, lr, next_layer)
+            previous_y = layer.backward(true_y, previous_y, next_layer, lr)
 
-    def train(self, x, y, epochs=10, lr=0.1):
+    def train(self, x, y, epochs=10, learning_rate=0.1, batch_size=128):
         for i in range(epochs):
-            valeur_layer = self.entree_sortie_reseau(x)
-            print(f"Epoch {i+1} : Loss {self.loss(valeur_layer[-1], y)}")
-            self.backward(valeur_layer, y, lr)
+            # Shuffle data
+            random_index = np.random.choice(x.shape[0], x.shape[0], replace=False)
+            x_shuffled = x[random_index, :]
+            y_shuffled = y[random_index, :]
+            # Perform gradient descent for each batch
+            for j in range(0, x.shape[0], batch_size):
+                # Select data for batch
+                max_index = min(batch_size + j, x_shuffled.shape[0] - 1)
+                x_batch = x_shuffled[j:max_index]
+                y_batch = y_shuffled[j:max_index]
+                # Forward pass
+                valeur_layer = self.entree_sortie_reseau(x_batch)
+                # Backward pass
+                self.backward(valeur_layer, y_batch, learning_rate)
+            # Print progress
+            print(f"Epoch {i+1} : Loss {self.loss(self.forward(x), y)}")
 
     def loss(self, y, true_y):
         loss = true_y * np.log(y) + (1 - true_y) * np.log(1 - y)
         return -loss.mean()
 
-    def fine_tuning(self, X, y):
+    def fine_tuning(self, x, y):
         pass
+
+    def predict(self, x):
+        return (self.forward(x) > 0.5).astype(int)
 
 
 def calcul_softmax(rbm: RBM, data: np.array) -> np.array:
@@ -169,14 +188,21 @@ def one_hot_encode(y, nb_classes):
     return np.eye(nb_classes)[y]
 
 
+def test_dnn(dnn, X_test, y_test):
+    """Returns error rate"""
+    y_predict = dnn.predict(X_test)
+    accuracy = np.mean(y_test == y_predict)
+    error_rate = 1 - accuracy
+    return error_rate
+
+
 if __name__ == "__main__":
     X_train, y_train, X_test, y_test = lire_mnist()
     y_train = one_hot_encode(y_train, 10)
     y_test = one_hot_encode(y_test, 10)
     # Flatten
+    X_train = X_train.reshape(X_train.shape[0], -1)
     X_test = X_test.reshape(X_test.shape[0], -1)
-    dnn = DNN([784, 256, 10])
-    dnn.train(X_test, y_test)
-
-    # X, im_shape = lire_alpha_digits("B")
-    # dnn.forward(X).shape  # Should be 39, 2
+    dnn = DNN([784, 128, 10])
+    dnn.train(X_train, y_train, learning_rate=0.5, epochs=10)
+    print(f"Error rate: {test_dnn(dnn, X_test, y_test)}")
