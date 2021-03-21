@@ -70,7 +70,7 @@ class DNN:
                 )
 
     def init_DNN_with_DBN(self, DBN):
-        for i, rbm in DBN.model:
+        for i, rbm in enumerate(DBN.model):
             self.layers[i].init_Layer_to_RBM(rbm)
 
     def forward(self, x):
@@ -95,7 +95,7 @@ class DNN:
         """
         valeur_layer = []
         y = data
-        for layer in dnn.layers:
+        for layer in self.layers:
             y = layer.forward(y)
             valeur_layer.append(y)
         # La dernière valeur est la proba
@@ -112,7 +112,7 @@ class DNN:
                 next_layer = None
             previous_y = layer.backward(true_y, previous_y, next_layer, lr)
 
-    def train(self, x, y, epochs=10, learning_rate=0.1, batch_size=128):
+    def train(self, x, y, epochs=10, batch_size=128, learning_rate=0.1):
         for i in range(epochs):
             # Shuffle data
             random_index = np.random.choice(x.shape[0], x.shape[0], replace=False)
@@ -179,3 +179,5 @@ if __name__ == "__main__":
     dnn = DNN([784, 128, 10])
     dnn.train(X_train, y_train, learning_rate=0.5, epochs=10)
     print(f"Error rate: {test_dnn(dnn, X_test, y_test)}")
+
+    

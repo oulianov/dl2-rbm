@@ -40,7 +40,7 @@ class RBM:
         """
         return sigmoid(hidden_v @ np.transpose(self.W) + self.a_bias)
 
-    def train(self, data, epoch=10, batch_size=32, learning_rate=0.01):
+    def train(self, data, epoch=10, batch_size=32, learning_rate=0.01, verbose=True):
         """Entraîne le RBM avec l'algorithme de contrastive divergence.
         ------
         data : (np.array) données d'entraînement, de dimension (n_samples, self.visible_dim)
@@ -84,7 +84,8 @@ class RBM:
             h = self.entree_sortie(data)
             data_recons = self.sortie_entree(h)
             recc_err = np.sum((data - data_recons) ** 2)
-            print(f"Epoch: {i+1}/{epoch}. Reconstruction error: {recc_err}")
+            if verbose == True:
+                print(f"Epoch: {i+1}/{epoch}. Reconstruction error: {recc_err}")
         return self
 
     def gibs_sampling(self, iter_gibs=20, init=False):
