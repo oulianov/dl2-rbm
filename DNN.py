@@ -142,7 +142,7 @@ class DNN:
         """Retourne le taux d'erreur.
         Appelée error_rate dans les instructions"""
         y_predict = self.predict(X_test)
-        accuracy = np.mean(np.argmax(y_test) == np.argmax(y_predict))
+        accuracy = np.mean(np.argmax(y_test, axis=1) == np.argmax(y_predict, axis=1))
         error_rate = 1 - accuracy
         return error_rate
 
