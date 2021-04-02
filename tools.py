@@ -115,3 +115,6 @@ def save_merged_images(images, size, path):
         merge_img[j * h : j * h + h, i * w : i * w + w] = image
 
     imageio.imwrite(path, merge_img)
+
+def one_hot_encode(y, nb_classes):
+    return np.eye(nb_classes)[y]

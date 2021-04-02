@@ -135,17 +135,23 @@ class DNN:
         loss = true_y * np.log(y) + (1 - true_y) * np.log(1 - y)
         return -loss.mean()
 
-    def fine_tuning(self, x, y):
-        pass
-
     def predict(self, x):
         return (self.forward(x) > 0.5).astype(int)
+
+    def error_rate(self, X_test, y_test):
+        """Retourne le taux d'erreur.
+        Appelée error_rate dans les instructions"""
+        y_predict = self.predict(X_test)
+        accuracy = np.mean(np.argmax(y_test) == np.argmax(y_predict))
+        error_rate = 1 - accuracy
+        return error_rate
 
 
 def calcul_softmax(rbm: RBM, data: np.array) -> np.array:
     """Prend en argument un RBM, des données d’entrée et qui
     retourne des probabilités sur les unités de sortie à partir de
     la fonction softmax.
+    Non utilisé
 
     Args:
         rbm (RBM): [description]
@@ -157,18 +163,6 @@ def calcul_softmax(rbm: RBM, data: np.array) -> np.array:
     return softmax(RBM.entree_sortie(data))
 
 
-def one_hot_encode(y, nb_classes):
-    return np.eye(nb_classes)[y]
-
-
-def test_dnn(dnn, X_test, y_test):
-    """Returns error rate"""
-    y_predict = dnn.predict(X_test)
-    accuracy = np.mean(y_test == y_predict)
-    error_rate = 1 - accuracy
-    return error_rate
-
-
 if __name__ == "__main__":
     X_train, y_train, X_test, y_test = lire_mnist()
     y_train = one_hot_encode(y_train, 10)
@@ -178,6 +172,4 @@ if __name__ == "__main__":
     X_test = X_test.reshape(X_test.shape[0], -1)
     dnn = DNN([784, 128, 10])
     dnn.train(X_train, y_train, learning_rate=0.5, epochs=10)
-    print(f"Error rate: {test_dnn(dnn, X_test, y_test)}")
-
-    
+    print(f"Error rate: {dnn.error_rate(X_test, y_test)}")

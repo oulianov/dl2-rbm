@@ -85,7 +85,7 @@ class RBM:
             data_recons = self.sortie_entree(h)
             recc_err = np.sum((data - data_recons) ** 2)
             if verbose == True:
-                print(f"Epoch: {i+1}/{epoch}. Reconstruction error: {recc_err}")
+                print(f"Epoch: {i+1}/{epoch}. Reconstruction error: {recc_err:.2f}")
         return self
 
     def gibs_sampling(self, iter_gibs=20, init=False):
