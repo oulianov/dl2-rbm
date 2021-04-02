@@ -25,7 +25,7 @@ class DBN:
             data = rbm.sortie_entree(data)
         return data
 
-    def train(self, data, epochs=10, batch_size=4, learning_rate=0.01):
+    def train(self, data, epochs=10, batch_size=4, learning_rate=0.1):
         """Cette fonction entraîne le Deep Belief Network.
         Paramètres:
         n_epochs:
@@ -33,15 +33,15 @@ class DBN:
         visible_v:
         lr:
         """
-        for k in range(epochs):
-            x = data
-            for i in range(self.nb_couches):
-                self.model[i].train(x, 1, batch_size, learning_rate, verbose=False)
-                x = self.model[i].entree_sortie(x)
-            h = self.entree_sortie(data)
-            data_recons = self.sortie_entree(h)
-            recc_err = np.sum((data - data_recons) ** 2)
-            print(f"DBN Epoch: {k+1}/{epochs}. Reconstruction error: {recc_err:.2f}")
+        x = data
+        for i in range(self.nb_couches):
+            print(f"Layer {i}")
+            self.model[i].train(x, epochs, batch_size, learning_rate, verbose=False)
+            x = self.model[i].entree_sortie(x)
+        h = self.entree_sortie(data)
+        data_recons = self.sortie_entree(h)
+        recc_err = np.sum((data - data_recons) ** 2) / data.shape[0]
+        print(f"DBN final reconstruction error: {recc_err:.2f}")
         return self
 
     def generer_image(self, nb_images, iter_gibs, im_shape, display=True):

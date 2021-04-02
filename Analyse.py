@@ -53,6 +53,9 @@ y_test = one_hot_encode(y_test, 10)
 # Flatten
 X_train = X_train.reshape(X_train.shape[0], -1)
 X_test = X_test.reshape(X_test.shape[0], -1)
+# Binarize
+X_train = (X_train > 0.5) * 1
+X_test = (X_test > 0.5) * 1
 
 # L'entraînement prend beaucoup de temps, donc on le fait seulement sur un subset
 X_train_small = X_train[:1000]
