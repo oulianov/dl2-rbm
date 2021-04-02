@@ -12,7 +12,7 @@ def plot_results(error_random_all, error_pretrained_all, horizontal, x_label, ti
     plt.xlabel(x_label)
     plt.title(title)
     plt.legend()
-    plt.savefig(f"{title}.png")
+    plt.savefig(f"{title}.png", dpi=144.0, transparent=False)
     plt.show()
 
 
@@ -75,7 +75,11 @@ for nb_layers in range(2, 6):
     error_pretrained_all.append(error_pretrained)
 print("Random:", error_random_all)
 print("Pretrain:", error_pretrained_all)
-plt.plot(
+
+# Random: [0.26170000000000004, 0.2479, 0.45030000000000003, 0.793]
+# Pretrain: [0.12170000000000003, 0.11219999999999997, 0.13080000000000003, 0.14870000000000005]
+
+plot_results(
     error_random_all,
     error_pretrained_all,
     list(range(2, 6)),
@@ -97,7 +101,7 @@ for layer_size in layer_sizes:
     error_pretrained_all.append(error_pretrained)
 print("Random:", error_random_all)
 print("Pretrain:", error_pretrained_all)
-plt.plot(
+plot_results(
     error_random_all,
     error_pretrained_all,
     layer_sizes,
@@ -122,7 +126,7 @@ for training_size in training_sizes:
     error_pretrained_all.append(error_pretrained)
 print("Random:", error_random_all)
 print("Pretrain:", error_pretrained_all)
-plt.plot(
+plot_results(
     error_random_all,
     error_pretrained_all,
     training_sizes,
