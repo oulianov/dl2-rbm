@@ -71,6 +71,8 @@ for nb_layers in range(2, 6):
     error_random, error_pretrained = compare_dnn_init(
         X_train_small, y_train_small, X_test, y_test, layers
     )
+    error_random_all.append(error_random)
+    error_pretrained_all.append(error_pretrained)
 print("Random:", error_random_all)
 print("Pretrain:", error_pretrained_all)
 plt.plot(
@@ -91,6 +93,8 @@ for layer_size in layer_sizes:
     error_random, error_pretrained = compare_dnn_init(
         X_train_small, y_train_small, X_test, y_test, layers
     )
+    error_random_all.append(error_random)
+    error_pretrained_all.append(error_pretrained)
 print("Random:", error_random_all)
 print("Pretrain:", error_pretrained_all)
 plt.plot(
@@ -114,6 +118,8 @@ for training_size in training_sizes:
     error_random, error_pretrained = compare_dnn_init(
         sub_X, sub_y, X_test, y_test, layers
     )
+    error_random_all.append(error_random)
+    error_pretrained_all.append(error_pretrained)
 print("Random:", error_random_all)
 print("Pretrain:", error_pretrained_all)
 plt.plot(
