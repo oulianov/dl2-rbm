@@ -87,6 +87,7 @@ plot_results(
     "Comparing depth",
 )
 
+
 # Fig 2 : Comparing width layers
 
 layer_sizes = list(range(100, 800, 100))
