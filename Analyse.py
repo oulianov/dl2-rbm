@@ -7,7 +7,7 @@ from tools import *
 
 def plot_results(error_random_all, error_pretrained_all, horizontal, x_label, title):
     plt.plot(horizontal, error_random_all, label="Random init")
-    plt.plot(horizontal, error_pretrained_all, label="RBM Pretrain")
+    plt.plot(horizontal, error_pretrained_all, label="DBN Pretrain")
     plt.ylabel("Error rate")
     plt.xlabel(x_label)
     plt.title(title)
@@ -139,7 +139,12 @@ plot_results(
 # On cherchera enfin une configuration permettant d’obtenir le meilleur
 # taux de classification possible (ne pas hésiter à utiliser les 60000 données
 # et des réseaux de grande taille).
-error_random, error_pretrained = compare_dnn_init(
-    X_train, y_train, X_test, y_test, [784, 600, 400, 200, 10]
-)  # Architecture classique
-print(f"Meilleure erreur: {error_pretrained}")
+
+dnn = DNN([784, 600, 400, 200, 10])
+dbn = DBN([784, 600, 400, 200])
+print("Pretraining RBM...")
+dbn.train(X_train, epochs=200, batch_size=64, learning_rate=0.1)
+dnn.init_DNN_with_DBN(dbn)
+dnn.train(X_train, y_train, epochs=150, batch_size=32, learning_rate=0.1)
+error = dnn.error_rate(X_test, y_test)
+print(f"Meilleure erreur: {error}")
