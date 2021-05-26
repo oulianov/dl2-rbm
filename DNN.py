@@ -17,6 +17,8 @@ class Layer:
         self.b = np.zeros(shape=(output_dim))
         self.activation = activation
         self.d_activation = d_activation
+        self.input_dim = input_dim
+        self.output_dim = output_dim
 
     def forward(self, x):
         self.logits = x @ self.W + self.b
@@ -102,7 +104,7 @@ class DNN:
         Returns:
             list: valeur des sorties sur chaque couche
         """
-        valeur_layer = []
+        valeur_layer = [data]
         y = data
         for layer in self.layers:
             y = layer.forward(y)
@@ -111,10 +113,10 @@ class DNN:
         return valeur_layer
 
     def backward(self, valeur_layer, true_y, lr):
-        for i in range(self.nb_layers() - 1, 0, -1):
+        for i in range(self.nb_layers() - 1, -1, -1):
             layer = self.layers[i]
-            estimated_y = valeur_layer[i]
-            previous_y = valeur_layer[i - 1]
+            estimated_y = valeur_layer[i + 1]
+            previous_y = valeur_layer[i]
             if i < self.nb_layers() - 1:
                 next_layer = self.layers[i + 1]
             else:
@@ -180,6 +182,6 @@ if __name__ == "__main__":
     # Flatten
     X_train = X_train.reshape(X_train.shape[0], -1)
     X_test = X_test.reshape(X_test.shape[0], -1)
-    dnn = DNN([784, 128, 10])
-    dnn.train(X_train, y_train, learning_rate=0.5, epochs=10)
+    dnn = DNN([784, 200, 200, 10])
+    dnn.train(X_train, y_train, learning_rate=0.1, batch_size=128, epochs=20)
     print(f"Error rate: {dnn.error_rate(X_test, y_test)}")
