@@ -12,24 +12,27 @@ def plot_results(
     x_label,
     title,
 ):
-    with open("results.txt", "w+") as f:
-        f.write(title+"\n")
-        f.write(str(horizontal)+"\n")
-        f.write("Random init"+"\n")
-        f.write(str(error_random_all)+"\n")
-        f.write("Pretrained"+"\n")
-        f.write(str(error_pretrained_all)+"\n")
-    plt.plot(horizontal, error_random_all, label="Random init")
-    plt.plot(horizontal, error_pretrained_all, label="DBN Pretrain")
+    with open("results.txt", "a+") as f:
+        f.write(title + "\n")
+        f.write(str(horizontal) + "\n")
+        f.write("Random init" + "\n")
+        f.write(str(error_random_all) + "\n")
+        f.write("Pretrained" + "\n")
+        f.write(str(error_pretrained_all) + "\n")
+    fig, ax = plt.subplots()
 
-    plt.ylim([0, 1])
-    plt.yticks(np.arange(0, 1, 0.05))
-    plt.ylabel("Error rate (lower is better)")
-    plt.xlabel(x_label)
-    plt.title(title)
-    plt.legend()
-    plt.savefig(f"{title}_2.png", dpi=144.0, transparent=False)
+    ax.plot(horizontal, error_random_all, label="Random init")
+    ax.plot(horizontal, error_pretrained_all, label="DBN Pretrain")
+
+    ax.set_ylim([0, 1])
+    ax.set_yticks(np.arange(0, 1, 0.05))
+    ax.set_ylabel("Error rate (lower is better)")
+    ax.set_xlabel(x_label)
+    fig.suptitle(title)
+    ax.legend()
+    plt.savefig(f"{title}.png", dpi=144.0, transparent=False)
     plt.show()
+    fig.clear(True)
 
 
 def compare_dnn_init(
@@ -98,9 +101,6 @@ for nb_layers in range(2, 6):
 print("Random:", error_random_all)
 print("Pretrain:", error_pretrained_all)
 
-Random: [0.26170000000000004, 0.2479, 0.45030000000000003, 0.793]
-Pretrain: [0.12170000000000003, 0.11219999999999997, 0.13080000000000003, 0.14870000000000005]
-
 plot_results(
     error_random_all,
     error_pretrained_all,
@@ -165,8 +165,8 @@ plot_results(
 dnn = DNN([784, 600, 400, 200, 10])
 dbn = DBN([784, 600, 400, 200])
 print("Pretraining RBM...")
-dbn.train(X_train[:10000], epochs=30, batch_size=100, learning_rate=0.1)
+dbn.train(X_train[:10000], epochs=30, batch_size=128, learning_rate=0.1)
 dnn.init_DNN_with_DBN(dbn)
-dnn.train(X_train, y_train, epochs=30, batch_size=100, learning_rate=0.1)
+dnn.train(X_train, y_train, epochs=30, batch_size=128, learning_rate=0.1)
 error = dnn.error_rate(X_test, y_test)
 print(f"Meilleure erreur: {error}")
