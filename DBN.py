@@ -12,7 +12,7 @@ class DBN:
         self.nb_couches = len(layer_sizes) - 1
         # Un DBN est un empilement de RBM
         self.model = []
-        for i in range(len(layer_sizes) - 1):
+        for i in range(self.nb_couches):
             self.model.append(RBM(layer_sizes[i], layer_sizes[i + 1]))
 
     def entree_sortie(self, data):
