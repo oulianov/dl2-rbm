@@ -35,10 +35,16 @@ class Layer:
         d_b = c.sum(axis=0)
         # Mémoriser le gradient de la sortie de la couche avant activation
         self.d_logits = c @ self.W.T
-        # Gradient descent
+        # Update layer
         batch_size = c.shape[0]
-        self.W -= (lr / batch_size) * d_W
-        self.b -= (lr / batch_size) * d_b
+        self.lr = lr / batch_size
+        self.d_W = d_W.copy()
+        self.d_b = d_b.copy()
+        self.update_params()
+
+    def update_params(self):
+        self.W -= self.lr * self.d_W
+        self.b -= self.lr * self.d_b
 
     def init_Layer_to_RBM(self, rbm: RBM):
         try:
@@ -68,6 +74,9 @@ class DNN:
                 self.layers.append(
                     Layer(layer_sizes[i], layer_sizes[i + 1], softmax, d_softmax)
                 )
+
+    def nb_layers(self):
+        return len(self.layers)
 
     def init_DNN_with_DBN(self, DBN):
         for i, rbm in enumerate(DBN.model):
@@ -102,11 +111,11 @@ class DNN:
         return valeur_layer
 
     def backward(self, valeur_layer, true_y, lr):
-        for i in range(len(self.layers) - 1, 0, -1):
+        for i in range(self.nb_layers() - 1, 0, -1):
             layer = self.layers[i]
             estimated_y = valeur_layer[i]
             previous_y = valeur_layer[i - 1]
-            if i < len(self.layers) - 1:
+            if i < self.nb_layers() - 1:
                 next_layer = self.layers[i + 1]
             else:
                 next_layer = None
@@ -132,6 +141,7 @@ class DNN:
             print(f"Epoch {i+1} : Loss {self.loss(self.forward(x), y)}")
 
     def loss(self, y, true_y):
+        y = np.clip(y, 1e-12, 1.0 - 1e-12)
         loss = true_y * np.log(y) + (1 - true_y) * np.log(1 - y)
         return -loss.mean()
 

@@ -5,18 +5,33 @@ from DNN import *
 from tools import *
 
 
-def plot_results(error_random_all, error_pretrained_all, horizontal, x_label, title):
+def plot_results(
+    error_random_all,
+    error_pretrained_all,
+    horizontal,
+    x_label,
+    title,
+):
     plt.plot(horizontal, error_random_all, label="Random init")
     plt.plot(horizontal, error_pretrained_all, label="DBN Pretrain")
-    plt.ylabel("Error rate")
+
+    plt.ylim([0, 1])
+    plt.yticks(np.arange(0, 1, 0.05))
+    plt.ylabel("Error rate (lower is better)")
     plt.xlabel(x_label)
     plt.title(title)
     plt.legend()
-    plt.savefig(f"{title}.png", dpi=144.0, transparent=False)
+    plt.savefig(f"{title}_2.png", dpi=144.0, transparent=False)
     plt.show()
 
 
-def compare_dnn_init(X_train, y_train, X_test, y_test, layers=[784, 100, 10]):
+def compare_dnn_init(
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    layers=[784, 100, 10],
+):
     print(f"Architecture : {layers}")
     # 1. initialiser deux réseaux identiques;
     dnn_random = DNN(layers)
@@ -58,8 +73,8 @@ X_train = (X_train > 0.5) * 1
 X_test = (X_test > 0.5) * 1
 
 # L'entraînement prend beaucoup de temps, donc on le fait seulement sur un subset
-X_train_small = X_train[:1000]
-y_train_small = y_train[:1000]
+X_train_small = X_train[:10000]
+y_train_small = y_train[:10000]
 
 
 # Fig 1 : Comparing nb layers
