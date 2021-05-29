@@ -135,6 +135,6 @@ if __name__ == "__main__":
         plt.imshow(X[i, :].reshape(im_shape))
         plt.show()
 
-    rbm = RBM(X.shape[1], 64)
+    rbm = RBM(X.shape[1], 100)
     rbm.train(X, epoch=200, learning_rate=0.05)
     rbm.generer_image(4, 20, im_shape)

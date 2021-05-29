@@ -73,6 +73,6 @@ if __name__ == "__main__":
         plt.colorbar()
         plt.show()
 
-    dbn = DBN([X.shape[1], 64, 64, 64])
+    dbn = DBN([X.shape[1], 100, 100, 100])
     dbn.train(X, epochs=100, batch_size=32, learning_rate=0.1)
     _ = dbn.generer_image(4, 40, im_shape)
